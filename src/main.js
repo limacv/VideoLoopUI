@@ -33,7 +33,7 @@ g_cam_ctrl.rotateSpeed *= -1;
 var gui = new dat.GUI();
 
 const loader = new THREE.OBJLoader();
-loader.load( '../assets_test/geometry.obj', function ( obj ) {
+loader.load( '/assets_test/geometry.obj', function ( obj ) {
 
     // The geometry
     var geometry = obj.children[0].geometry;
@@ -61,11 +61,11 @@ loader.load( '../assets_test/geometry.obj', function ( obj ) {
 
     // The texture
     var textureLoader = new THREE.TextureLoader();
-    g_staticMap = textureLoader.load("../assets_test/static.png");
+    g_staticMap = textureLoader.load("/assets_test/static.png");
     
     var loader = new THREE.FileLoader();
     loader.load(
-        "../assets_test/meta.json",
+        "/assets_test/meta.json",
         function ( data ) {
             // output the text to the console
             var cfg = JSON.parse(data)
@@ -74,7 +74,7 @@ loader.load( '../assets_test/geometry.obj', function ( obj ) {
 
             for (var i = 0; i < g_framecount; i++)
             {
-                var path = "../assets_test/dynamic/" + i.toString().padStart(4, '0') + ".png"
+                var path = "/assets_test/dynamic/" + i.toString().padStart(4, '0') + ".png"
                 var dynamicMap = textureLoader.load(path);
                 dynamicMap.minFilter = THREE.LinearFilter;
                 g_dynamicMaps[i] = dynamicMap;
