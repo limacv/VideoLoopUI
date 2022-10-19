@@ -8,7 +8,41 @@
 		</style>
 	</head>
 	<body>
-		<script src="js/three.js"></script>
-		<script type="module" src="src/main.js">	</script>
+		<script src="libs/dat.gui.min.js"></script>
+		<script src="libs/three.min.js"></script>
+		<script src="libs/controls/OrbitControls.js"></script>
+		<script src="libs/loaders/OBJLoader.js"></script>
+		<script src="libs/Stats.js"></script>
+		
+		<script id="vertexShader" type="x-shader/x-vertex">
+			varying vec2 vUv;
+			varying vec3 vColor;
+			
+			void main()	{
+				vUv = uv;
+				vColor = color;
+				gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+			}
+		</script>
+		<script id="fragmentShader" type="x-shader/x-fragment">
+			varying vec2 vUv;
+			varying vec3 vColor;
+
+			uniform sampler2D staticMap;
+			uniform sampler2D dynamicMap;
+				
+			void main()	{
+				vec4 rgba;
+				if (vColor.r > 0.5)
+				    rgba = texture2D(staticMap, vUv);
+				else if (vColor.g > 0.5)
+				    rgba = texture2D(dynamicMap, vUv);
+				else
+					rgba = vec4(1, 0, 1, 1);
+
+				gl_FragColor = rgba;
+			}
+		</script>
+		<script src="src/main.js" type="module">	</script>
 	</body>
 </html>
