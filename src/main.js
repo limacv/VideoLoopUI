@@ -8,8 +8,6 @@ const renderer = new THREE.WebGLRenderer();
 renderer.setSize( window.innerWidth, window.innerHeight );
 document.body.appendChild( renderer.domElement );
 
-const data_url = "/VideoLoopUI/assets_test"
-
 // threejs scene & global variables
 const PI = 3.1415926535;
 const g_scene = new THREE.Scene();
@@ -23,9 +21,11 @@ var g_clock = new THREE.Clock();
 var g_delta_time = 0;
 var g_x_limit = [0, PI * 2];
 var g_y_limit = [0, PI];
-var g_view_params = {
-    speed: -0.01,
-    reset: function(){g_cam_ctrl.reset()},
+var g_ctrl_params = {
+    data_url: "/VideoLoopUI/assets_test",
+    loadscene: function(){reset_scene(); load_scene();},
+    speed: 0.01,
+    reset: function(){g_cam_ctrl.reset();},
 };
 var g_x_angle_last, g_y_angle_last;
 
@@ -37,99 +37,112 @@ g_camera.up.set(0, -1, 0);
 g_cam_ctrl.update()
 g_cam_ctrl.target = new THREE.Vector3(0, 0, 5);
 g_cam_ctrl.enableDamping = true;
-g_cam_ctrl.rotateSpeed = g_view_params.speed;
+g_cam_ctrl.rotateSpeed = - g_ctrl_params.speed;
 g_cam_ctrl.saveState();
 
 // the UI
 var gui = new dat.GUI();
+gui.add(g_ctrl_params, 'data_url')
+gui.add(g_ctrl_params, 'loadscene')
 var viewctrl = gui.addFolder('View Control');
-viewctrl.add(g_view_params, 'reset');
+viewctrl.add(g_ctrl_params, 'reset');
+viewctrl.add(g_ctrl_params, 'speed', 0, 0.1);
+
+function reset_scene(){
+    for( var i = g_scene.children.length - 1; i >= 0; i--) { 
+        g_scene.remove(g_scene.children[i]); 
+    }
+    g_dynamicMaps=[];
+    g_framecount = 0;
+    g_fps = 0;
+}
 
 const loader = new THREE.OBJLoader();
-loader.load( data_url + '/geometry.obj', function ( obj ) {
-
-    // The geometry
-    var geometry = obj.children[0].geometry;
-
-    // The material
-    var material = new THREE.ShaderMaterial();
-    material.extensions.derivatives = true;
-    material.setValues({
-        uniforms: THREE.UniformsUtils.merge([
-            {
-                dynamicMap: {}, staticMap: {},
+function load_scene(){
+    loader.load( g_ctrl_params.data_url + '/geometry.obj', function ( obj ) {
+    
+        // The geometry
+        var geometry = obj.children[0].geometry;
+    
+        // The material
+        var material = new THREE.ShaderMaterial();
+        material.extensions.derivatives = true;
+        material.setValues({
+            uniforms: THREE.UniformsUtils.merge([
+                {
+                    dynamicMap: {}, staticMap: {},
+                },
+            ]), 
+            vertexShader: document.getElementById('vertexShader').text,
+            fragmentShader: document.getElementById('fragmentShader').text,
+            wireframe: false,
+            side: THREE.DoubleSide,
+        });
+        material.vertexColors = true;
+        
+        material.blending = THREE.CustomBlending;
+        material.blendEquation = THREE.AddEquation;
+        material.blendSrc = THREE.SrcAlphaFactor;
+        material.blendDst = THREE.OneMinusSrcAlphaFactor;
+    
+        // The texture
+        var textureLoader = new THREE.TextureLoader();
+        g_staticMap = textureLoader.load(g_ctrl_params.data_url + "/static.png");
+        
+        var loader = new THREE.FileLoader();
+        loader.load(
+            g_ctrl_params.data_url + "/meta.json",
+            function ( data ) {
+                // output the text to the console
+                var cfg = JSON.parse(data)
+                g_framecount = cfg.frame_count;
+                g_fps = cfg.fps;
+    
+                // setting camera
+                g_camera.up.set(cfg.up[0], cfg.up[1], cfg.up[2]);
+                g_cam_ctrl.target.set(cfg.lookat[0], cfg.lookat[1], cfg.lookat[2]);
+    
+                const x_limit = cfg.limit[0] / cfg.lookat[2];
+                const y_limit = cfg.limit[1] / cfg.lookat[2];
+                g_cam_ctrl.update();
+                g_cam_ctrl.saveState();
+                const clamp = (num, min, max) => Math.min(Math.max(num, min), max);
+                var x_angle = g_cam_ctrl.getAzimuthalAngle();
+                x_angle = x_angle < 0 ? x_angle + 2 * PI : x_angle;
+                let y_angle = g_cam_ctrl.getPolarAngle();
+                g_x_limit[0] = clamp(x_angle - x_limit, 0, PI * 2);
+                g_x_limit[1] = clamp(x_angle + x_limit, 0, PI * 2);
+                g_y_limit[0] = clamp(y_angle - y_limit, 0, PI);
+                g_y_limit[1] = clamp(y_angle + y_limit, 0, PI);
+    
+                for (var i = 0; i < g_framecount; i++)
+                {
+                    var path = g_ctrl_params.data_url + "/dynamic/" + i.toString().padStart(4, '0') + ".png"
+                    var dynamicMap = textureLoader.load(path);
+                    dynamicMap.minFilter = THREE.LinearFilter;
+                    g_dynamicMaps[i] = dynamicMap;
+                }
+    
             },
-        ]), 
-        vertexShader: document.getElementById('vertexShader').text,
-        fragmentShader: document.getElementById('fragmentShader').text,
-        wireframe: false,
-        side: THREE.DoubleSide,
-    });
-    material.vertexColors = true;
-    
-    material.blending = THREE.CustomBlending;
-    material.blendEquation = THREE.AddEquation;
-    material.blendSrc = THREE.SrcAlphaFactor;
-    material.blendDst = THREE.OneMinusSrcAlphaFactor;
-
-    // The texture
-    var textureLoader = new THREE.TextureLoader();
-    g_staticMap = textureLoader.load(data_url + "/static.png");
-    
-    var loader = new THREE.FileLoader();
-    loader.load(
-        data_url + "/meta.json",
-        function ( data ) {
-            // output the text to the console
-            var cfg = JSON.parse(data)
-            g_framecount = cfg.frame_count;
-            g_fps = cfg.fps;
-
-            // setting camera
-            g_camera.up.set(cfg.up[0], cfg.up[1], cfg.up[2]);
-            g_cam_ctrl.target.set(cfg.lookat[0], cfg.lookat[1], cfg.lookat[2]);
-
-            const x_limit = cfg.limit[0] / cfg.lookat[2];
-            const y_limit = cfg.limit[1] / cfg.lookat[2];
-            g_cam_ctrl.update();
-            g_cam_ctrl.saveState();
-            const clamp = (num, min, max) => Math.min(Math.max(num, min), max);
-            var x_angle = g_cam_ctrl.getAzimuthalAngle();
-            x_angle = x_angle < 0 ? x_angle + 2 * PI : x_angle;
-            let y_angle = g_cam_ctrl.getPolarAngle();
-            g_x_limit[0] = clamp(x_angle - x_limit, 0, PI * 2);
-            g_x_limit[1] = clamp(x_angle + x_limit, 0, PI * 2);
-            g_y_limit[0] = clamp(y_angle - y_limit, 0, PI);
-            g_y_limit[1] = clamp(y_angle + y_limit, 0, PI);
-
-            for (var i = 0; i < g_framecount; i++)
-            {
-                var path = data_url + "/dynamic/" + i.toString().padStart(4, '0') + ".png"
-                var dynamicMap = textureLoader.load(path);
-                dynamicMap.minFilter = THREE.LinearFilter;
-                g_dynamicMaps[i] = dynamicMap;
+            function ( xhr ) { },
+            function ( err ) {
+                console.error( 'An error happened when load meta file' );
             }
-
-        },
-        function ( xhr ) { },
-        function ( err ) {
-            console.error( 'An error happened when load meta file' );
-        }
-    )
+        )
+        
+        g_staticMap.minFilter = THREE.LinearFilter;
+        material.uniforms.staticMap.value = g_staticMap;
+        
+        g_material = material
+        const mesh = new THREE.Mesh( geometry, material );
+        g_scene.add(mesh);
     
-    g_staticMap.minFilter = THREE.LinearFilter;
-    material.uniforms.staticMap.value = g_staticMap;
+    }, undefined, function ( error ) {
     
-    g_material = material
-    const mesh = new THREE.Mesh( geometry, material );
-	g_scene.add(mesh);
-
-}, undefined, function ( error ) {
-
-	console.error( error );
-
-} );
-
+        console.error( error );
+    
+    } );
+}
 
 function animate() {
     requestAnimationFrame( animate );
@@ -157,7 +170,7 @@ function animate() {
     //      || (y_angle > g_y_limit[1] && y_angle - g_y_angle_last > 0))
     //     g_cam_ctrl.rotateSpeed = g_view_params.speed * 0.1;
     // else
-    //     g_cam_ctrl.rotateSpeed = g_view_params.speed;  
+    g_cam_ctrl.rotateSpeed = - g_ctrl_params.speed;  
 
     g_x_angle_last = x_angle;
     g_y_angle_last = y_angle;
@@ -175,4 +188,5 @@ function animate() {
     stats.end();
 };
 
+load_scene();
 animate();
