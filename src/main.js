@@ -115,9 +115,12 @@ function load_scene(){
                 g_ctrl_params.fps = cfg.fps;
     
                 // setting camera
+                g_camera.position.set(0, 0, 0);
                 g_camera.up.set(cfg.up[0], cfg.up[1], cfg.up[2]);
+                g_camera.fov = cfg.fov;
+                g_camera.updateProjectionMatrix()
                 g_cam_ctrl.target.set(cfg.lookat[0], cfg.lookat[1], cfg.lookat[2]);
-    
+                
                 const x_limit = cfg.limit[0] / cfg.lookat[2];
                 const y_limit = cfg.limit[1] / cfg.lookat[2];
                 g_cam_ctrl.update();
