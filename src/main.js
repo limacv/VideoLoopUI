@@ -8,6 +8,8 @@ const renderer = new THREE.WebGLRenderer();
 renderer.setSize( window.innerWidth, window.innerHeight );
 document.body.appendChild( renderer.domElement );
 
+const data_url = "/VideoLoopUI/assets_test"
+
 // threejs scene & global variables
 const PI = 3.1415926535;
 const g_scene = new THREE.Scene();
@@ -44,7 +46,7 @@ var viewctrl = gui.addFolder('View Control');
 viewctrl.add(g_view_params, 'reset');
 
 const loader = new THREE.OBJLoader();
-loader.load( '../assets_test/geometry.obj', function ( obj ) {
+loader.load( data_url + '/geometry.obj', function ( obj ) {
 
     // The geometry
     var geometry = obj.children[0].geometry;
@@ -72,11 +74,11 @@ loader.load( '../assets_test/geometry.obj', function ( obj ) {
 
     // The texture
     var textureLoader = new THREE.TextureLoader();
-    g_staticMap = textureLoader.load("../assets_test/static.png");
+    g_staticMap = textureLoader.load(data_url + "/static.png");
     
     var loader = new THREE.FileLoader();
     loader.load(
-        "../assets_test/meta.json",
+        data_url + "/meta.json",
         function ( data ) {
             // output the text to the console
             var cfg = JSON.parse(data)
@@ -102,7 +104,7 @@ loader.load( '../assets_test/geometry.obj', function ( obj ) {
 
             for (var i = 0; i < g_framecount; i++)
             {
-                var path = "../assets_test/dynamic/" + i.toString().padStart(4, '0') + ".png"
+                var path = data_url + "/dynamic/" + i.toString().padStart(4, '0') + ".png"
                 var dynamicMap = textureLoader.load(path);
                 dynamicMap.minFilter = THREE.LinearFilter;
                 g_dynamicMaps[i] = dynamicMap;
