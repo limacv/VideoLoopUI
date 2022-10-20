@@ -9,6 +9,7 @@ renderer.setSize( window.innerWidth, window.innerHeight );
 document.body.appendChild( renderer.domElement );
 
 // threejs scene & global variables
+const PI = 3.1415926535;
 const g_scene = new THREE.Scene();
 var g_material;
 var g_dynamicMaps=new Array();
@@ -18,22 +19,32 @@ var g_current_frame = 0;
 var g_fps = 0
 var g_clock = new THREE.Clock();
 var g_delta_time = 0;
+var g_x_limit = [0, PI * 2];
+var g_y_limit = [0, PI];
+var g_view_params = {
+    speed: -0.01,
+    reset: function(){g_cam_ctrl.reset()},
+};
+var g_x_angle_last, g_y_angle_last;
 
 // camera controls
-var g_camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
+var g_camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 0.1, 1000 );
 const g_cam_ctrl = new THREE.OrbitControls( g_camera, renderer.domElement );
 g_camera.position.set(0, 0, 0);
 g_camera.up.set(0, -1, 0);
 g_cam_ctrl.update()
 g_cam_ctrl.target = new THREE.Vector3(0, 0, 5);
 g_cam_ctrl.enableDamping = true;
-g_cam_ctrl.rotateSpeed *= -1;
+g_cam_ctrl.rotateSpeed = g_view_params.speed;
+g_cam_ctrl.saveState();
 
 // the UI
 var gui = new dat.GUI();
+var viewctrl = gui.addFolder('View Control');
+viewctrl.add(g_view_params, 'reset');
 
 const loader = new THREE.OBJLoader();
-loader.load( '/VideoLoopUI/assets_test/geometry.obj', function ( obj ) {
+loader.load( '../assets_test/geometry.obj', function ( obj ) {
 
     // The geometry
     var geometry = obj.children[0].geometry;
@@ -61,20 +72,37 @@ loader.load( '/VideoLoopUI/assets_test/geometry.obj', function ( obj ) {
 
     // The texture
     var textureLoader = new THREE.TextureLoader();
-    g_staticMap = textureLoader.load("/VideoLoopUI/assets_test/static.png");
+    g_staticMap = textureLoader.load("../assets_test/static.png");
     
     var loader = new THREE.FileLoader();
     loader.load(
-        "/VideoLoopUI/assets_test/meta.json",
+        "../assets_test/meta.json",
         function ( data ) {
             // output the text to the console
             var cfg = JSON.parse(data)
             g_framecount = cfg.frame_count;
             g_fps = cfg.fps;
 
+            // setting camera
+            g_camera.up.set(cfg.up[0], cfg.up[1], cfg.up[2]);
+            g_cam_ctrl.target.set(cfg.lookat[0], cfg.lookat[1], cfg.lookat[2]);
+
+            const x_limit = cfg.limit[0] / cfg.lookat[2];
+            const y_limit = cfg.limit[1] / cfg.lookat[2];
+            g_cam_ctrl.update();
+            g_cam_ctrl.saveState();
+            const clamp = (num, min, max) => Math.min(Math.max(num, min), max);
+            var x_angle = g_cam_ctrl.getAzimuthalAngle();
+            x_angle = x_angle < 0 ? x_angle + 2 * PI : x_angle;
+            let y_angle = g_cam_ctrl.getPolarAngle();
+            g_x_limit[0] = clamp(x_angle - x_limit, 0, PI * 2);
+            g_x_limit[1] = clamp(x_angle + x_limit, 0, PI * 2);
+            g_y_limit[0] = clamp(y_angle - y_limit, 0, PI);
+            g_y_limit[1] = clamp(y_angle + y_limit, 0, PI);
+
             for (var i = 0; i < g_framecount; i++)
             {
-                var path = "/VideoLoopUI/assets_test/dynamic/" + i.toString().padStart(4, '0') + ".png"
+                var path = "../assets_test/dynamic/" + i.toString().padStart(4, '0') + ".png"
                 var dynamicMap = textureLoader.load(path);
                 dynamicMap.minFilter = THREE.LinearFilter;
                 g_dynamicMaps[i] = dynamicMap;
@@ -116,7 +144,30 @@ function animate() {
             
             g_delta_time = g_delta_time % (1 / g_fps);
     }
+    // update speed to add limit
+    var x_angle = g_cam_ctrl.getAzimuthalAngle();
+    x_angle = x_angle < 0 ? x_angle + 2 * PI : x_angle;
+    var y_angle = g_cam_ctrl.getPolarAngle();
+
+    // if ((x_angle < g_x_limit[0] && x_angle - g_x_angle_last < 0)
+    //      || (x_angle > g_x_limit[1] && x_angle - g_x_angle_last > 0)
+    //      || (y_angle < g_y_limit[0] && y_angle - g_y_angle_last < 0) 
+    //      || (y_angle > g_y_limit[1] && y_angle - g_y_angle_last > 0))
+    //     g_cam_ctrl.rotateSpeed = g_view_params.speed * 0.1;
+    // else
+    //     g_cam_ctrl.rotateSpeed = g_view_params.speed;  
+
+    g_x_angle_last = x_angle;
+    g_y_angle_last = y_angle;
+    // var deltax = Math.min(Math.abs(x_angle - g_x_limit[0]), Math.abs(x_angle - g_x_limit[1])) / (g_x_limit[1] - g_x_limit[0]) * 2;
+    // var deltay = Math.min(Math.abs(y_angle - g_y_limit[0]), Math.abs(y_angle - g_y_limit[1])) / (g_y_limit[1] - g_y_limit[0]) * 2;
+    // var delta = Math.sqrt(deltax * deltax + deltay * deltay) / Math.sqrt(2);
+    // var speed_scale = delta;
+    // g_cam_ctrl.rotateSpeed = g_view_params.speed * speed_scale;
+    // console.log(g_cam_ctrl.rotateSpeed)
+
     g_cam_ctrl.update();
+    
     renderer.setClearColor( 0x00000000, 0);
     renderer.render( g_scene, g_camera );
     stats.end();
