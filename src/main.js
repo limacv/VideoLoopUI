@@ -14,9 +14,10 @@ const g_scene = new THREE.Scene();
 var g_material;
 var g_dynamicMaps=new Array();
 var g_staticMap;
+var g_isplay = true;
+var g_isreverseplay = false;
 var g_framecount = 0;
 var g_current_frame = 0;
-var g_fps = 0
 var g_clock = new THREE.Clock();
 var g_delta_time = 0;
 var g_x_limit = [0, PI * 2];
@@ -24,7 +25,13 @@ var g_y_limit = [0, PI];
 var g_ctrl_params = {
     data_url: "/VideoLoopUI/assets_test",
     loadscene: function(){reset_scene(); load_scene();},
+
+    fps: 0,
+    play: function(){g_isplay = !g_isplay;},
+    reverse: function(){g_isreverseplay = !g_isreverseplay;},
     speed: 0.01,
+    panspeed: 0.02,
+    zoomspeed: 0.02,
     reset: function(){g_cam_ctrl.reset();},
 };
 var g_x_angle_last, g_y_angle_last;
@@ -38,15 +45,24 @@ g_cam_ctrl.update()
 g_cam_ctrl.target = new THREE.Vector3(0, 0, 5);
 g_cam_ctrl.enableDamping = true;
 g_cam_ctrl.rotateSpeed = - g_ctrl_params.speed;
+g_cam_ctrl.panSpeed = g_ctrl_params.panspeed;
+g_cam_ctrl.zoomSpeed = g_ctrl_params.zoomspeed;
+g_cam_ctrl.screenSpacePanning = true;
 g_cam_ctrl.saveState();
 
 // the UI
 var gui = new dat.GUI();
 gui.add(g_ctrl_params, 'data_url')
 gui.add(g_ctrl_params, 'loadscene')
+var playctrl = gui.addFolder('Play Control');
+playctrl.add(g_ctrl_params, 'play');
+playctrl.add(g_ctrl_params, 'reverse');
+playctrl.add(g_ctrl_params, 'fps', 0, 100).listen();
 var viewctrl = gui.addFolder('View Control');
 viewctrl.add(g_ctrl_params, 'reset');
 viewctrl.add(g_ctrl_params, 'speed', 0, 0.1);
+viewctrl.add(g_ctrl_params, 'panspeed', 0, 0.1);
+viewctrl.add(g_ctrl_params, 'zoomspeed', 0, 0.1);
 
 function reset_scene(){
     for( var i = g_scene.children.length - 1; i >= 0; i--) { 
@@ -54,7 +70,7 @@ function reset_scene(){
     }
     g_dynamicMaps=[];
     g_framecount = 0;
-    g_fps = 0;
+    g_ctrl_params.fps = 0;
 }
 
 const loader = new THREE.OBJLoader();
@@ -96,7 +112,7 @@ function load_scene(){
                 // output the text to the console
                 var cfg = JSON.parse(data)
                 g_framecount = cfg.frame_count;
-                g_fps = cfg.fps;
+                g_ctrl_params.fps = cfg.fps;
     
                 // setting camera
                 g_camera.up.set(cfg.up[0], cfg.up[1], cfg.up[2]);
@@ -133,7 +149,7 @@ function load_scene(){
         g_staticMap.minFilter = THREE.LinearFilter;
         material.uniforms.staticMap.value = g_staticMap;
         
-        g_material = material
+        g_material = material;
         const mesh = new THREE.Mesh( geometry, material );
         g_scene.add(mesh);
     
@@ -150,14 +166,14 @@ function animate() {
 
     // whether to update the frame content
     g_delta_time += g_clock.getDelta();
-    if (g_fps > 0 && g_delta_time > (1 / g_fps))
+    if (g_isplay && g_ctrl_params.fps > 0 && g_delta_time > (1 / g_ctrl_params.fps))
     {
         g_material.uniforms.dynamicMap.value = g_dynamicMaps[g_current_frame];
-        g_current_frame += 1;
-        if (g_current_frame >= g_framecount)
-            g_current_frame = 0;
+        var step = g_isreverseplay ? -1 : 1;
+        g_current_frame += step;
+        g_current_frame = g_current_frame >= g_framecount ? 0 : (g_current_frame < 0 ? g_framecount - 1: g_current_frame);
             
-            g_delta_time = g_delta_time % (1 / g_fps);
+        g_delta_time = g_delta_time % (1 / g_ctrl_params.fps);
     }
     // update speed to add limit
     var x_angle = g_cam_ctrl.getAzimuthalAngle();
@@ -170,7 +186,9 @@ function animate() {
     //      || (y_angle > g_y_limit[1] && y_angle - g_y_angle_last > 0))
     //     g_cam_ctrl.rotateSpeed = g_view_params.speed * 0.1;
     // else
-    g_cam_ctrl.rotateSpeed = - g_ctrl_params.speed;  
+    g_cam_ctrl.rotateSpeed = - g_ctrl_params.speed;
+    g_cam_ctrl.panSpeed = g_ctrl_params.panspeed;
+    g_cam_ctrl.zoomSpeed = g_ctrl_params.zoomspeed;
 
     g_x_angle_last = x_angle;
     g_y_angle_last = y_angle;
