@@ -23,7 +23,7 @@ var g_delta_time = 0;
 var g_x_limit = [0, PI * 2];
 var g_y_limit = [0, PI];
 var g_ctrl_params = {
-    data_url: "/VideoLoopUI/assets_test",
+    data_url: "/VideoLoopUI/assets/fall5",
     loadscene: function(){reset_scene(); load_scene();},
 
     fps: 0,
