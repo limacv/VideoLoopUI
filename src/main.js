@@ -41,7 +41,7 @@ var g_camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.inner
 const g_cam_ctrl = new THREE.OrbitControls( g_camera, renderer.domElement );
 g_camera.position.set(0, 0, 0);
 g_camera.up.set(0, -1, 0);
-g_cam_ctrl.update()
+g_cam_ctrl.update();
 g_cam_ctrl.target = new THREE.Vector3(0, 0, 5);
 g_cam_ctrl.enableDamping = true;
 g_cam_ctrl.rotateSpeed = - g_ctrl_params.speed;
@@ -113,11 +113,16 @@ function load_scene(){
                 var cfg = JSON.parse(data)
                 g_framecount = cfg.frame_count;
                 g_ctrl_params.fps = cfg.fps;
-    
+
                 // setting camera
+                if (window.innerWidth / window.innerHeight < 16 / 9)
+                    g_camera.fov = cfg.fov * 0.95;
+                else
+                    g_camera.fov = cfg.fov * 0.95 / (window.innerWidth / window.innerHeight) * (16 / 9);
+                g_camera.aspect = window.innerWidth / window.innerHeight;
                 g_camera.position.set(0, 0, 0);
                 g_camera.up.set(cfg.up[0], cfg.up[1], cfg.up[2]);
-                g_camera.fov = cfg.fov;
+
                 g_camera.updateProjectionMatrix()
                 g_cam_ctrl.target.set(cfg.lookat[0], cfg.lookat[1], cfg.lookat[2]);
                 
