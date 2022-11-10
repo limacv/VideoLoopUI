@@ -116,10 +116,10 @@ function load_scene(){
 
                 // setting camera
                 if (window.innerWidth / window.innerHeight < 16 / 9)
-                    g_camera.fov = cfg.fov * 0.95;
+                    g_camera.fov = cfg.fov;
                 else
-                    g_camera.fov = cfg.fov * 0.95 / (window.innerWidth / window.innerHeight) * (16 / 9);
-                g_camera.aspect = window.innerWidth / window.innerHeight;
+                    g_camera.fov = cfg.fov / (window.innerWidth / window.innerHeight) * (16 / 9);
+                // g_camera.aspect = window.innerWidth / window.innerHeight;
                 g_camera.position.set(0, 0, 0);
                 g_camera.up.set(cfg.up[0], cfg.up[1], cfg.up[2]);
 
