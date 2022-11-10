@@ -8,6 +8,14 @@ const renderer = new THREE.WebGLRenderer();
 renderer.setSize( window.innerWidth, window.innerHeight );
 document.body.appendChild( renderer.domElement );
 
+// get default data url
+const querystr = window.location.search;
+const urlparams = new URLSearchParams(querystr);
+var defaultdata = "/VideoLoopUI/assets/fall5";
+
+if (urlparams.has("dataurl"))
+    defaultdata = urlparams.get("dataurl");
+
 // threejs scene & global variables
 const PI = 3.1415926535;
 const g_scene = new THREE.Scene();
@@ -23,7 +31,7 @@ var g_delta_time = 0;
 var g_x_limit = [0, PI * 2];
 var g_y_limit = [0, PI];
 var g_ctrl_params = {
-    data_url: "/VideoLoopUI/assets/fall5",
+    data_url: defaultdata,
     loadscene: function(){reset_scene(); load_scene();},
 
     fps: 0,
@@ -151,6 +159,7 @@ function load_scene(){
             function ( xhr ) { },
             function ( err ) {
                 console.error( 'An error happened when load meta file' );
+                alert('Oops! Fail to load meta file');
             }
         )
         
@@ -164,7 +173,7 @@ function load_scene(){
     }, undefined, function ( error ) {
     
         console.error( error );
-    
+        alert('Oops! Fail to load data');
     } );
 }
 
