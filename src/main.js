@@ -223,5 +223,6 @@ function animate() {
     stats.end();
 };
 
+gui.close();
 load_scene();
 animate();
