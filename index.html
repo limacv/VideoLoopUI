@@ -9,12 +9,21 @@
 		</style>
 	</head>
 	<body style="overflow: hidden">
-		<script src="libs/dat.gui.min.js"></script>
-		<script src="libs/three.min.js"></script>
-		<script src="libs/controls/OrbitControls.js"></script>
-		<script src="libs/loaders/OBJLoader.js"></script>
-		<script src="libs/Stats.js"></script>
 		
+		<script src="src/libs/dat.gui.min.js"></script>
+		<!-- <script src="libs/three.min.js"></script> -->
+		<!-- <script src="libs/controls/OrbitControls.js"></script> -->
+		<!-- <script src="libs/loaders/OBJLoader.js"></script> -->
+		<!-- <script src="src/libs/webxr/VRButton.js"></script> -->
+		<script src="src/libs/Stats.js"></script>
+		<script type="importmap">
+			{
+				"imports": {
+					"three": "./src/libs/three.module.js",
+					"three/addons/": "./src/libs/"
+				}
+			}
+		</script>
 		<script id="vertexShader" type="x-shader/x-vertex">
 			varying vec2 vUv;
 			varying vec3 vColor;
@@ -40,13 +49,9 @@
 				    rgba = texture2D(dynamicMap, vUv);
 				else
 					rgba = vec4(1, 0, 1, 1);
-
 				gl_FragColor = rgba;
 			}
 		</script>
 		<script src="src/main.js" type="module">	</script>
-
-		<script async src="//static.getclicky.com/101398676.js"></script>
-		<noscript><p><img alt="Clicky" width="1" height="1" src="//in.getclicky.com/101398676ns.gif" /></p></noscript>
 	</body>
 </html>

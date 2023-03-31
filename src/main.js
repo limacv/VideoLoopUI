@@ -1,21 +1,33 @@
+import * as THREE from 'three';
+import {OrbitControls} from "three/addons/controls/OrbitControls.js";
+import {OBJLoader} from "three/addons/loaders/OBJLoader.js";
+import {VRButton} from "three/addons/webxr/VRButton.js"
+
 // monitoring
 var stats = new Stats();
 stats.showPanel( 0 ); // 0: fps, 1: ms, 2: mb, 3+: custom
 document.body.appendChild( stats.dom );
 
-// render context
-const renderer = new THREE.WebGLRenderer();
-renderer.setSize( window.innerWidth, window.innerHeight );
-document.body.appendChild( renderer.domElement );
-
-// get default data url
+// read params
 const querystr = window.location.search;
 const urlparams = new URLSearchParams(querystr);
 var defaultdata = "/VideoLoopUI/assets/fall5";
-
+var use_vr = false;
 if (urlparams.has("dataurl"))
     defaultdata = urlparams.get("dataurl");
+if (urlparams.has("use_vr"))
+    use_vr = true;
 
+// render context
+let renderer = new THREE.WebGLRenderer({alpha: false});
+renderer.setSize( window.innerWidth, window.innerHeight );
+document.body.appendChild( renderer.domElement );
+if (use_vr)
+{
+    document.body.appendChild(VRButton.createButton( renderer ));
+    renderer.xr.enabled = true;
+}
+THREE.ColorManagement.enabled = true;
 // threejs scene & global variables
 const PI = 3.1415926535;
 const g_scene = new THREE.Scene();
@@ -46,7 +58,7 @@ var g_x_angle_last, g_y_angle_last;
 
 // camera controls
 var g_camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 0.1, 1000 );
-const g_cam_ctrl = new THREE.OrbitControls( g_camera, renderer.domElement );
+const g_cam_ctrl = new OrbitControls( g_camera, renderer.domElement );
 g_camera.position.set(0, 0, 0);
 g_camera.up.set(0, -1, 0);
 g_cam_ctrl.update();
@@ -81,7 +93,7 @@ function reset_scene(){
     g_ctrl_params.fps = 0;
 }
 
-const loader = new THREE.OBJLoader();
+const loader = new OBJLoader();
 function load_scene(){
     loader.load( g_ctrl_params.data_url + '/geometry.obj', function ( obj ) {
     
@@ -108,6 +120,7 @@ function load_scene(){
         material.blendEquation = THREE.AddEquation;
         material.blendSrc = THREE.SrcAlphaFactor;
         material.blendDst = THREE.OneMinusSrcAlphaFactor;
+        material.blendSrcAlpha = THREE.OneFactor;
     
         // The texture
         var textureLoader = new THREE.TextureLoader();
@@ -162,7 +175,7 @@ function load_scene(){
                 alert('Oops! Fail to load meta file');
             }
         )
-        
+        g_staticMap.generateMipmaps = false;
         g_staticMap.minFilter = THREE.LinearFilter;
         material.uniforms.staticMap.value = g_staticMap;
         
@@ -178,49 +191,53 @@ function load_scene(){
 }
 
 function animate() {
-    requestAnimationFrame( animate );
-    stats.begin();
+    renderer.setAnimationLoop(
+        function ()
+        {
+            stats.begin();
 
-    // whether to update the frame content
-    g_delta_time += g_clock.getDelta();
-    if (g_isplay && g_ctrl_params.fps > 0 && g_delta_time > (1 / g_ctrl_params.fps))
-    {
-        g_material.uniforms.dynamicMap.value = g_dynamicMaps[g_current_frame];
-        var step = g_isreverseplay ? -1 : 1;
-        g_current_frame += step;
-        g_current_frame = g_current_frame >= g_framecount ? 0 : (g_current_frame < 0 ? g_framecount - 1: g_current_frame);
+            // whether to update the frame content
+            g_delta_time += g_clock.getDelta();
+            if (g_isplay && g_ctrl_params.fps > 0 && g_delta_time > (1 / g_ctrl_params.fps))
+            {
+                g_material.uniforms.dynamicMap.value = g_dynamicMaps[g_current_frame];
+                var step = g_isreverseplay ? -1 : 1;
+                g_current_frame += step;
+                g_current_frame = g_current_frame >= g_framecount ? 0 : (g_current_frame < 0 ? g_framecount - 1: g_current_frame);
+                    
+                g_delta_time = g_delta_time % (1 / g_ctrl_params.fps);
+            }
+            // update speed to add limit
+            var x_angle = g_cam_ctrl.getAzimuthalAngle();
+            x_angle = x_angle < 0 ? x_angle + 2 * PI : x_angle;
+            var y_angle = g_cam_ctrl.getPolarAngle();
+
+            // if ((x_angle < g_x_limit[0] && x_angle - g_x_angle_last < 0)
+            //      || (x_angle > g_x_limit[1] && x_angle - g_x_angle_last > 0)
+            //      || (y_angle < g_y_limit[0] && y_angle - g_y_angle_last < 0) 
+            //      || (y_angle > g_y_limit[1] && y_angle - g_y_angle_last > 0))
+            //     g_cam_ctrl.rotateSpeed = g_view_params.speed * 0.1;
+            // else
+            g_cam_ctrl.rotateSpeed = - g_ctrl_params.speed;
+            g_cam_ctrl.panSpeed = g_ctrl_params.panspeed;
+            g_cam_ctrl.zoomSpeed = g_ctrl_params.zoomspeed;
+
+            g_x_angle_last = x_angle;
+            g_y_angle_last = y_angle;
+            // var deltax = Math.min(Math.abs(x_angle - g_x_limit[0]), Math.abs(x_angle - g_x_limit[1])) / (g_x_limit[1] - g_x_limit[0]) * 2;
+            // var deltay = Math.min(Math.abs(y_angle - g_y_limit[0]), Math.abs(y_angle - g_y_limit[1])) / (g_y_limit[1] - g_y_limit[0]) * 2;
+            // var delta = Math.sqrt(deltax * deltax + deltay * deltay) / Math.sqrt(2);
+            // var speed_scale = delta;
+            // g_cam_ctrl.rotateSpeed = g_view_params.speed * speed_scale;
+            // console.log(g_cam_ctrl.rotateSpeed)
+
+            g_cam_ctrl.update();
             
-        g_delta_time = g_delta_time % (1 / g_ctrl_params.fps);
-    }
-    // update speed to add limit
-    var x_angle = g_cam_ctrl.getAzimuthalAngle();
-    x_angle = x_angle < 0 ? x_angle + 2 * PI : x_angle;
-    var y_angle = g_cam_ctrl.getPolarAngle();
-
-    // if ((x_angle < g_x_limit[0] && x_angle - g_x_angle_last < 0)
-    //      || (x_angle > g_x_limit[1] && x_angle - g_x_angle_last > 0)
-    //      || (y_angle < g_y_limit[0] && y_angle - g_y_angle_last < 0) 
-    //      || (y_angle > g_y_limit[1] && y_angle - g_y_angle_last > 0))
-    //     g_cam_ctrl.rotateSpeed = g_view_params.speed * 0.1;
-    // else
-    g_cam_ctrl.rotateSpeed = - g_ctrl_params.speed;
-    g_cam_ctrl.panSpeed = g_ctrl_params.panspeed;
-    g_cam_ctrl.zoomSpeed = g_ctrl_params.zoomspeed;
-
-    g_x_angle_last = x_angle;
-    g_y_angle_last = y_angle;
-    // var deltax = Math.min(Math.abs(x_angle - g_x_limit[0]), Math.abs(x_angle - g_x_limit[1])) / (g_x_limit[1] - g_x_limit[0]) * 2;
-    // var deltay = Math.min(Math.abs(y_angle - g_y_limit[0]), Math.abs(y_angle - g_y_limit[1])) / (g_y_limit[1] - g_y_limit[0]) * 2;
-    // var delta = Math.sqrt(deltax * deltax + deltay * deltay) / Math.sqrt(2);
-    // var speed_scale = delta;
-    // g_cam_ctrl.rotateSpeed = g_view_params.speed * speed_scale;
-    // console.log(g_cam_ctrl.rotateSpeed)
-
-    g_cam_ctrl.update();
-    
-    renderer.setClearColor( 0x00000000, 0);
-    renderer.render( g_scene, g_camera );
-    stats.end();
+            renderer.render( g_scene, g_camera );
+            renderer.setClearColor( 0x000000, 1);
+            stats.end();
+        }
+    );
 };
 
 gui.close();
