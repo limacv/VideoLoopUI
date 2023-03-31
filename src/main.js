@@ -1,7 +1,7 @@
-import * as THREE from 'three';
-import {OrbitControls} from "three/addons/controls/OrbitControls.js";
-import {OBJLoader} from "three/addons/loaders/OBJLoader.js";
-import {VRButton} from "three/addons/webxr/VRButton.js"
+import * as THREE from "/src/libs/three.module.js";
+import {OrbitControls} from "/src/libs/controls/OrbitControls.js";
+import {OBJLoader} from "/src/libs/loaders/OBJLoader.js";
+import {VRButton} from "/src/libs/webxr/VRButton.js"
 
 // monitoring
 var stats = new Stats();
