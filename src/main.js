@@ -54,6 +54,7 @@ var g_ctrl_params = {
     zoomspeed: 0.02,
     reset: function(){g_cam_ctrl.reset();},
 };
+var g_cfg;
 var g_x_angle_last, g_y_angle_last;
 
 // camera controls
@@ -93,6 +94,17 @@ function reset_scene(){
     g_ctrl_params.fps = 0;
 }
 
+function onWindowResize() {
+    g_camera.aspect = window.innerWidth / window.innerHeight;
+    if (window.innerWidth / window.innerHeight < 16 / 9)
+        g_camera.fov = g_cfg.fov;
+    else
+        g_camera.fov = g_cfg.fov / (window.innerWidth / window.innerHeight) * (16 / 9);
+    g_camera.updateProjectionMatrix();
+    renderer.setSize( window.innerWidth, window.innerHeight );
+}
+window.addEventListener("resize", onWindowResize)
+
 const loader = new OBJLoader();
 function load_scene(){
     loader.load( g_ctrl_params.data_url + '/geometry.obj', function ( obj ) {
@@ -131,24 +143,24 @@ function load_scene(){
             g_ctrl_params.data_url + "/meta.json",
             function ( data ) {
                 // output the text to the console
-                var cfg = JSON.parse(data)
-                g_framecount = cfg.frame_count;
-                g_ctrl_params.fps = cfg.fps;
+                g_cfg = JSON.parse(data)
+                g_framecount = g_cfg.frame_count;
+                g_ctrl_params.fps = g_cfg.fps;
 
                 // setting camera
                 if (window.innerWidth / window.innerHeight < 16 / 9)
-                    g_camera.fov = cfg.fov;
+                    g_camera.fov = g_cfg.fov;
                 else
-                    g_camera.fov = cfg.fov / (window.innerWidth / window.innerHeight) * (16 / 9);
+                    g_camera.fov = g_cfg.fov / (window.innerWidth / window.innerHeight) * (16 / 9);
                 // g_camera.aspect = window.innerWidth / window.innerHeight;
                 g_camera.position.set(0, 0, 0);
-                g_camera.up.set(cfg.up[0], cfg.up[1], cfg.up[2]);
+                g_camera.up.set(g_cfg.up[0], g_cfg.up[1], g_cfg.up[2]);
 
                 g_camera.updateProjectionMatrix()
-                g_cam_ctrl.target.set(cfg.lookat[0], cfg.lookat[1], cfg.lookat[2]);
+                g_cam_ctrl.target.set(g_cfg.lookat[0], g_cfg.lookat[1], g_cfg.lookat[2]);
                 
-                const x_limit = cfg.limit[0] / cfg.lookat[2];
-                const y_limit = cfg.limit[1] / cfg.lookat[2];
+                const x_limit = g_cfg.limit[0] / g_cfg.lookat[2];
+                const y_limit = g_cfg.limit[1] / g_cfg.lookat[2];
                 g_cam_ctrl.update();
                 g_cam_ctrl.saveState();
                 const clamp = (num, min, max) => Math.min(Math.max(num, min), max);
