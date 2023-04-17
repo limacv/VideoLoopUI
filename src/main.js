@@ -53,6 +53,11 @@ var g_ctrl_params = {
     panspeed: 0.02,
     zoomspeed: 0.02,
     reset: function(){g_cam_ctrl.reset();},
+
+    x: 0,
+    y: 0,
+    z: 0,
+    scale: 0,
 };
 var g_cfg;
 var g_x_angle_last, g_y_angle_last;
@@ -61,11 +66,10 @@ var g_x_angle_last, g_y_angle_last;
 var g_camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 0.1, 1000 );
 const g_cam_ctrl = new OrbitControls( g_camera, renderer.domElement );
 g_camera.position.set(0, 0, 0);
-g_camera.up.set(0, -1, 0);
 g_cam_ctrl.update();
 g_cam_ctrl.target = new THREE.Vector3(0, 0, 5);
 g_cam_ctrl.enableDamping = true;
-g_cam_ctrl.rotateSpeed = - g_ctrl_params.speed;
+g_cam_ctrl.rotateSpeed = g_ctrl_params.speed;
 g_cam_ctrl.panSpeed = g_ctrl_params.panspeed;
 g_cam_ctrl.zoomSpeed = g_ctrl_params.zoomspeed;
 g_cam_ctrl.screenSpacePanning = true;
@@ -84,6 +88,11 @@ viewctrl.add(g_ctrl_params, 'reset');
 viewctrl.add(g_ctrl_params, 'speed', 0, 0.1);
 viewctrl.add(g_ctrl_params, 'panspeed', 0, 0.1);
 viewctrl.add(g_ctrl_params, 'zoomspeed', 0, 0.1);
+var meshctrl = gui.addFolder('Mesh Position');
+meshctrl.add(g_ctrl_params, 'x', -5., 5.)
+meshctrl.add(g_ctrl_params, 'y', -5., 5.)
+meshctrl.add(g_ctrl_params, 'z', -5., 5.)
+meshctrl.add(g_ctrl_params, 'scale', -5., 5)
 
 function reset_scene(){
     for( var i = g_scene.children.length - 1; i >= 0; i--) { 
@@ -111,7 +120,7 @@ function load_scene(){
     
         // The geometry
         var geometry = obj.children[0].geometry;
-    
+        geometry.rotateX(PI);
         // The material
         var material = new THREE.ShaderMaterial();
         material.extensions.derivatives = true;
@@ -154,10 +163,8 @@ function load_scene(){
                     g_camera.fov = g_cfg.fov / (window.innerWidth / window.innerHeight) * (16 / 9);
                 // g_camera.aspect = window.innerWidth / window.innerHeight;
                 g_camera.position.set(0, 0, 0);
-                g_camera.up.set(g_cfg.up[0], g_cfg.up[1], g_cfg.up[2]);
-
                 g_camera.updateProjectionMatrix()
-                g_cam_ctrl.target.set(g_cfg.lookat[0], g_cfg.lookat[1], g_cfg.lookat[2]);
+                g_cam_ctrl.target.set(g_cfg.lookat[0], -g_cfg.lookat[1], -g_cfg.lookat[2]);
                 
                 const x_limit = g_cfg.limit[0] / g_cfg.lookat[2];
                 const y_limit = g_cfg.limit[1] / g_cfg.lookat[2];
@@ -192,7 +199,7 @@ function load_scene(){
         material.uniforms.staticMap.value = g_staticMap;
         
         g_material = material;
-        const mesh = new THREE.Mesh( geometry, material );
+        var mesh = new THREE.Mesh( geometry, material );
         g_scene.add(mesh);
     
     }, undefined, function ( error ) {
@@ -230,7 +237,7 @@ function animate() {
             //      || (y_angle > g_y_limit[1] && y_angle - g_y_angle_last > 0))
             //     g_cam_ctrl.rotateSpeed = g_view_params.speed * 0.1;
             // else
-            g_cam_ctrl.rotateSpeed = - g_ctrl_params.speed;
+            g_cam_ctrl.rotateSpeed = g_ctrl_params.speed;
             g_cam_ctrl.panSpeed = g_ctrl_params.panspeed;
             g_cam_ctrl.zoomSpeed = g_ctrl_params.zoomspeed;
 
@@ -244,7 +251,13 @@ function animate() {
             // console.log(g_cam_ctrl.rotateSpeed)
 
             g_cam_ctrl.update();
-            
+            var mesh = g_scene.children[0];
+            if (mesh)
+            {
+                g_scene.children[0].position.set(g_ctrl_params.x, g_ctrl_params.y, g_ctrl_params.z);
+                var scale = Math.pow(2, g_ctrl_params.scale);
+                g_scene.children[0].scale.set(scale, scale, scale);
+            }
             renderer.render( g_scene, g_camera );
             renderer.setClearColor( 0x000000, 1);
             stats.end();
