@@ -62,6 +62,12 @@ var g_ctrl_params = {
 var g_cfg;
 var g_x_angle_last, g_y_angle_last;
 
+if (use_vr)
+{
+    g_ctrl_params.z = 1.1;
+    g_ctrl_params.scale = 2;
+}
+
 // camera controls
 var g_camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 0.1, 1000 );
 const g_cam_ctrl = new OrbitControls( g_camera, renderer.domElement );
@@ -89,10 +95,10 @@ viewctrl.add(g_ctrl_params, 'speed', 0, 0.1);
 viewctrl.add(g_ctrl_params, 'panspeed', 0, 0.1);
 viewctrl.add(g_ctrl_params, 'zoomspeed', 0, 0.1);
 var meshctrl = gui.addFolder('Mesh Position');
-meshctrl.add(g_ctrl_params, 'x', -5., 5.)
-meshctrl.add(g_ctrl_params, 'y', -5., 5.)
-meshctrl.add(g_ctrl_params, 'z', -5., 5.)
-meshctrl.add(g_ctrl_params, 'scale', -5., 5)
+meshctrl.add(g_ctrl_params, 'x', -8., 8.)
+meshctrl.add(g_ctrl_params, 'y', -8., 8.)
+meshctrl.add(g_ctrl_params, 'z', -8., 8.)
+meshctrl.add(g_ctrl_params, 'scale', -8., 8.)
 
 function reset_scene(){
     for( var i = g_scene.children.length - 1; i >= 0; i--) { 
@@ -254,9 +260,9 @@ function animate() {
             var mesh = g_scene.children[0];
             if (mesh)
             {
-                g_scene.children[0].position.set(g_ctrl_params.x, g_ctrl_params.y, g_ctrl_params.z);
+                mesh.position.set(g_ctrl_params.x, g_ctrl_params.y, g_ctrl_params.z);
                 var scale = Math.pow(2, g_ctrl_params.scale);
-                g_scene.children[0].scale.set(scale, scale, scale);
+                mesh.scale.set(scale, scale, scale);
             }
             renderer.render( g_scene, g_camera );
             renderer.setClearColor( 0x000000, 1);
